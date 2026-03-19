@@ -1,0 +1,2186 @@
+{
+  "openapi": "3.0.3",
+  "x-sap-shortText": "Enables you to create, schedule, monitor, and secure jobs using various authentication methods and scheduling options.",
+  "info": {
+    "title": "SAP Job Scheduling Service REST API",
+    "description": "REST APIs for the SAP Job Scheduling service that allows you to create, manage, and monitor jobs and job schedules.\n\nThe SAP Job Scheduling service provides options to:\n- Create and manage jobs with HTTP endpoints or Cloud Foundry tasks\n- Schedule jobs using cron expressions, one-time schedules, or recurring intervals\n- Monitor job execution through detailed run logs\n- Secure job actions with OAuth 2.0 authentication\n- Configure alerts and monitoring integrations\n\n## Authentication\nThe service supports multiple authentication mechanisms:\n- **OAuth 2.0 Client Credentials flow** (service-to-service authentication for automated API access)\n- **OAuth 2.0 JWT tokens** (direct token usage, recommended for standard plan)\n- **Bearer tokens** (for Cloud Foundry environments)\n\n### OAuth 2.0 Configuration\nTo use OAuth 2.0 flows in Swagger UI:\n1. Click the \"Authorize\" button\n2. Select the appropriate OAuth 2.0 flow\n3. Enter your client ID and client secret\n4. For Client Credentials flow, tokens are obtained automatically\n\n**Note:** Replace `{landscape-region}` and `your-subdomain` in the OAuth URLs with your actual SAP BTP landscape domain and subdomain.\n\n## Rate Limits\nThe API implements rate limiting with both absolute and client-specific limits:\n- Requests may be throttled when approaching limits\n- 429 (Too Many Requests) returned when client limits exceeded\n- 503 (Service Unavailable) returned when absolute limits exceeded\n- Retry-After header provided when requests are denied\n\n## Time Zone\nAll timestamps are in UTC timezone. No other timezones are currently supported.\n\n## Request Size Limits\nPOST request body size is limited to 100 KB.\n",
+    "version": "2.78.2",
+    "contact": {
+      "name": "SAP Job Scheduling Service Team",
+      "url": "https://help.sap.com/docs/JOB_SCHEDULER"
+    },
+    "license": {
+      "name": "SAP License",
+      "url": "https://www.sap.com/corporate/en/legal/terms-of-use.html"
+    },
+    "termsOfService": "https://www.sap.com/corporate/en/legal/terms-of-use.html"
+  },
+  "servers": [
+    {
+      "url": "https://jobscheduler-rest.cfapps.{landscape-region}.hana.ondemand.com/scheduler",
+      "description": "SAP Job Scheduling Service REST API Server",
+      "variables": {
+        "landscape-region": {
+          "default": "eu10",
+          "description": "SAP BTP landscape region, you can check your credentials for Job Scheduler service instance for the correct region value."
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "OAuth2ClientCredentials": [
+        "Viewer"
+      ]
+    },
+    {
+      "JWTAuth": []
+    },
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/jobs": {
+      "post": {
+        "summary": "Create job",
+        "description": "Creates a job by accepting one or more job schedules to be created.\n\n**Note:** You cannot create CF tasks using the REST API because they require CF permissions. You can create them through the Dashboard.\n\nThe job creation request fails if a job with the same name already exists for one instance of the service - including multitenancy.\n\nAlways use HTTPS in the action endpoint URL to encrypt data during communication.\n",
+        "operationId": "createJob",
+        "tags": [
+          "Jobs"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobRequest"
+              },
+              "examples": {
+                "cronJob": {
+                  "summary": "Job with cron schedule",
+                  "value": {
+                    "name": "validateSalesOrder",
+                    "description": "cron job that validates sales order requests",
+                    "action": "https://salesOrderApp.hana.ondemand.com:40023/salesOrders/validate",
+                    "active": true,
+                    "httpMethod": "PUT",
+                    "ansConfig": {
+                      "onError": false,
+                      "onSuccess": false
+                    },
+                    "calmConfig": {
+                      "enabled": true
+                    },
+                    "schedules": [
+                      {
+                        "cron": "* * * * * */10 0",
+                        "description": "this schedule runs every 10 minutes",
+                        "data": {
+                          "salesOrderId": "1234"
+                        },
+                        "active": true,
+                        "startTime": {
+                          "date": "2015-10-20 04:30 +0000",
+                          "format": "YYYY-MM-DD HH:mm Z"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "oneTimeJob": {
+                  "summary": "One-time job execution",
+                  "value": {
+                    "name": "processOrder",
+                    "description": "One-time order processing job",
+                    "action": "https://api.example.com/process-order",
+                    "active": true,
+                    "httpMethod": "POST",
+                    "schedules": [
+                      {
+                        "time": "tomorrow at 2am",
+                        "description": "Process order tomorrow morning",
+                        "active": true,
+                        "data": {
+                          "orderId": "12345"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job created successfully",
+            "headers": {
+              "Location": {
+                "description": "Relative resource URI for finding the job details",
+                "schema": {
+                  "type": "string",
+                  "example": "/scheduler/jobs/42"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve all jobs",
+        "description": "Retrieves all jobs in a service instance with optional filtering and pagination.\n\nSupports filtering using OData-style filter expressions with properties:\n- name, subDomain, tenantId\n- Boolean operators: and, or\n- Function: contains\n- Equality operator: eq\n",
+        "operationId": "getAllJobs",
+        "tags": [
+          "Jobs"
+        ],
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Number of jobs to retrieve (default 10, max 200)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of jobs to skip (default 0, zero-based pagination)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "query",
+            "description": "ID of specific job to retrieve",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Name of specific job to retrieve",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobType",
+            "in": "query",
+            "description": "Type of job to filter by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HTTP_ENDPOINT",
+                "CF_TASK"
+              ]
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "Tenant ID to filter jobs by",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "OData-style filter expression. Examples:\n- `contains(name, 'my_job')`\n- `name eq 'my_job'`\n- `contains(name, 'test') and subDomain eq 'my_domain'`\n",
+            "schema": {
+              "type": "string"
+            },
+            "examples": {
+              "none": {
+                "value": "",
+                "summary": "No filter applied"
+              },
+              "nameContains": {
+                "value": "contains(name, 'sales')",
+                "summary": "Filter by name containing 'sales'"
+              },
+              "exactMatch": {
+                "value": "name eq 'validateOrder'",
+                "summary": "Exact name match"
+              },
+              "complex": {
+                "value": "contains(name, 'test') and subDomain eq 'my_domain'",
+                "summary": "Complex filter with AND condition"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jobs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}": {
+      "get": {
+        "summary": "Retrieve job details",
+        "description": "Retrieves the saved configuration settings of a specified job.\nOptionally includes job schedules if displaySchedules parameter is true.\n",
+        "operationId": "getJobById",
+        "tags": [
+          "Jobs"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to retrieve",
+            "schema": {
+              "type": "integer",
+              "example": 42
+            }
+          },
+          {
+            "name": "displaySchedules",
+            "in": "query",
+            "description": "Whether to include schedule details in the response",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update job by ID",
+        "description": "Updates an existing job's runtime information using job ID.\nYou can update one or more attributes of the job. If a parameter is not provided \nor is undefined, the existing value is retained.\n\n**Note:** This endpoint does NOT support creating jobs. Use POST /jobs to create a new job,\nor PUT /jobs/{name} to create/update by name.\n",
+        "operationId": "updateJobById",
+        "tags": [
+          "Jobs"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to update",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "jobNotFound": {
+                    "summary": "Job not found during update",
+                    "value": {
+                      "code": 404,
+                      "message": "Error while configuring job: Job Not Found",
+                      "type": "Resource Not Found",
+                      "detailedError": "Error while configuring job: Job Not Found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete job",
+        "description": "Deletes a job and all its runtime information such as schedules and logs.\nAlso terminates processing of all schedules (active and inactive) of the job.\n",
+        "operationId": "deleteJob",
+        "tags": [
+          "Jobs"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to delete",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "jobNotFound": {
+                    "summary": "Job not found during deletion",
+                    "value": {
+                      "code": 404,
+                      "message": "Error while removing job: Job Not Found",
+                      "type": "Resource Not Found",
+                      "detailedError": "Error while removing job: Job Not Found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/jobs/{name}": {
+      "put": {
+        "summary": "Configure job by name",
+        "description": "Configures a job with updated runtime information using job name.\nIf the job name already exists, the API replaces the job content with new content\nretaining the same job ID and name.\n\nIf used to create a job, parameters must conform to the same constraints as the create job API.\nThe job name in the request URI must match the job name in the request body.\n",
+        "operationId": "updateJobByName",
+        "tags": [
+          "Jobs"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name of the job to update/create",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobRequest"
+              },
+              "examples": {
+                "createCronJob": {
+                  "summary": "Create job with cron schedule",
+                  "value": {
+                    "name": "newSuperCoolName",
+                    "description": "cron job that validates sales order requests",
+                    "action": "https://salesOrderApp.hana.ondemand.com:40023/salesOrders/validate",
+                    "active": true,
+                    "httpMethod": "PUT",
+                    "ansConfig": {
+                      "onSuccess": false,
+                      "onError": true,
+                      "onDelay": false
+                    },
+                    "calmConfig": {
+                      "enabled": true
+                    },
+                    "schedules": [
+                      {
+                        "cron": "* * * * * */10 0",
+                        "description": "this schedule runs every 10 minutes",
+                        "data": {
+                          "salesOrderId": "1234"
+                        },
+                        "active": true,
+                        "startTime": {
+                          "date": "2015-10-20 04:30 +0000",
+                          "format": "YYYY-MM-DD HH:mm Z"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "updateExistingJob": {
+                  "summary": "Update existing job (replaces content)",
+                  "value": {
+                    "name": "existingJobName",
+                    "description": "Updated job description",
+                    "action": "https://api.example.com/updated-endpoint",
+                    "active": true,
+                    "httpMethod": "POST",
+                    "schedules": [
+                      {
+                        "time": "tomorrow at 2pm",
+                        "description": "One-time execution",
+                        "active": true
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Job created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid schedule parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "extraSchedulingParams": {
+                    "summary": "Multiple scheduling parameters provided",
+                    "value": {
+                      "code": 400,
+                      "message": "Error while configuring job: Extra scheduling parameters passed",
+                      "type": "Bad Request/Invalid Request",
+                      "detailedError": "Error while configuring job: Extra scheduling parameters passed"
+                    }
+                  },
+                  "invalidCron": {
+                    "summary": "Invalid cron expression",
+                    "value": {
+                      "code": 400,
+                      "message": "Invalid cron specified",
+                      "type": "Bad Request/Invalid Request",
+                      "detailedError": "Invalid cron specified"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}/schedules": {
+      "post": {
+        "summary": "Create job schedule",
+        "description": "Creates a job schedule for a specified job.\nThe job configuration settings (Action URL, HTTP Method, and Job Activation Status) \nare valid for the new schedule.\n",
+        "operationId": "createJobSchedule",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job for which schedule is to be created",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduleRequest"
+              },
+              "examples": {
+                "cronSchedule": {
+                  "summary": "Schedule with cron expression",
+                  "value": {
+                    "cron": "* * * * 12 0 0",
+                    "description": "Daily at noon",
+                    "active": true,
+                    "data": {
+                      "customParam": "value"
+                    }
+                  }
+                },
+                "oneTimeSchedule": {
+                  "summary": "One-time schedule",
+                  "value": {
+                    "time": "tomorrow at 2pm",
+                    "description": "One-time execution tomorrow",
+                    "active": true
+                  }
+                },
+                "repeatInterval": {
+                  "summary": "Recurring schedule with interval",
+                  "value": {
+                    "repeatInterval": "2 hours",
+                    "repeatAt": "09:00",
+                    "description": "Every 2 hours starting at 9 AM",
+                    "active": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Schedule created successfully",
+            "headers": {
+              "Location": {
+                "description": "Relative resource URI for finding the schedule details",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "get": {
+        "summary": "Retrieve job schedules",
+        "description": "Retrieves all schedules for a specified job with pagination support",
+        "operationId": "getJobSchedules",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job whose schedules to retrieve",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Number of schedules to retrieve (default 10)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of schedules to skip (default 0, zero-based pagination)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedules retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete all job schedules",
+        "description": "Deletes all schedules of the specified job.\nAll related information such as schedule configurations and logs are deleted.\nProcessing of all schedules is immediately terminated.\n",
+        "operationId": "deleteAllJobSchedules",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of job whose schedules are to be deleted",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All schedules deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}/schedules/activationStatus": {
+      "post": {
+        "summary": "Activate or deactivate all job schedules",
+        "description": "Activates or deactivates all existing schedules for a job",
+        "operationId": "setAllSchedulesActivation",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job whose schedules are to be activated/deactivated",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "activationStatus"
+                ],
+                "properties": {
+                  "activationStatus": {
+                    "type": "boolean",
+                    "description": "Requested activation status:\n- true: activate all schedules\n- false: deactivate all schedules\n",
+                    "example": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activation status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}/schedules/{scheduleId}": {
+      "get": {
+        "summary": "Retrieve job schedule details",
+        "description": "Retrieves the saved configuration settings of a specified job schedule.\nOptionally includes schedule logs if displayLogs parameter is true.\n",
+        "operationId": "getJobSchedule",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to which schedule belongs",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the schedule to retrieve",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "displayLogs",
+            "in": "query",
+            "description": "Whether to include logs in the response (max 200 logs)",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleWithLogsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "put": {
+        "summary": "Configure job schedule",
+        "description": "Configures/updates the runtime information of a job schedule for a specified job.\nAll job configuration settings remain valid for the modified schedule.\n\nIf a job schedule is in the execution queue, calling this API stops the execution process.\nIf the schedule was identified for execution, the updated schedule is executed immediately.\n\n**Note:** The API does not support changing the original scheduling mode (e.g., from cron to repeatInterval).\nHowever, changing the value for the existing scheduling parameter is supported.\n",
+        "operationId": "updateJobSchedule",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to which schedule belongs",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the schedule to update",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schedule updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete job schedule",
+        "description": "Deletes the specified job schedule.\nAll related information such as job schedule configurations and logs are deleted.\nThe processing of the schedule is also immediately terminated.\n",
+        "operationId": "deleteJobSchedule",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job schedule to delete",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}/schedules/{scheduleId}/runs": {
+      "get": {
+        "summary": "Retrieve job run logs",
+        "description": "Retrieves the run logs for a specified job schedule with pagination support.\nReturns execution history including timestamps, status, and error information.\n",
+        "operationId": "getJobRunLogs",
+        "tags": [
+          "Run Logs"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to which schedule belongs",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the schedule whose run logs to retrieve",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Number of job run logs to retrieve. \nIf not set and only offset is specified, defaults to 10.\nIf neither is set, maximum 200 logs are returned.\n",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of job run logs to skip (default 0, zero-based pagination)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunLogListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}/schedules/{scheduleId}/runs/{runId}": {
+      "get": {
+        "summary": "Retrieve job run log details",
+        "description": "Retrieves the details for a specified job run log",
+        "operationId": "getJobRunLogDetails",
+        "tags": [
+          "Run Logs"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to which schedule belongs",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the schedule to which run belongs",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the run whose logs are to be retrieved",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run log details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunLogResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update job run log",
+        "description": "Used by the application to inform the Job Scheduler about the status of an asynchronous, \nlong-running job. An application must call this API after completion of the asynchronous \nexecution of the job.\n\n**Note:** Job Scheduler passes jobId, scheduleId, and runId as part of the request headers \nwhile invoking the job action.\n",
+        "operationId": "updateJobRunLog",
+        "tags": [
+          "Run Logs"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the job to which schedule belongs",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the schedule to which run belongs",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the run whose logs are to be updated",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "success"
+                ],
+                "properties": {
+                  "success": {
+                    "type": "boolean",
+                    "description": "Indicates the status of the job run",
+                    "example": true
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Information that accompanies the job run status",
+                    "example": "Long running operation to process employee salaries succeeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Run log updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth2ClientCredentials": {
+        "type": "oauth2",
+        "description": "OAuth 2.0 Client Credentials flow for service-to-service authentication.\nUsed by applications and services for automated API access.\n",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://{cf-subaccount-subdomain}.authentication.{landscape-region}.hana.ondemand.com/oauth/token",
+            "scopes": {
+              "job-scheduler.read": "Read job and schedule data",
+              "job-scheduler.write": "Create and update jobs and schedules"
+            }
+          }
+        }
+      },
+      "JWTAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "OAuth 2.0 JWT token authentication (recommended for standard plan).\nObtain token from XSUAA service using client credentials or certificate-based authentication.\nAlternative to OAuth2 flows for direct token usage.\n"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Bearer token authentication for Cloud Foundry environments.\nUsed internally by CF runtime.\n"
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request due to invalid data provided",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "invalidCron": {
+                "summary": "Invalid cron expression",
+                "value": {
+                  "code": 400,
+                  "message": "Invalid cron specified",
+                  "type": "Bad Request/Invalid Request",
+                  "detailedError": "Invalid cron specified"
+                }
+              },
+              "invalidConfig": {
+                "summary": "Invalid configuration",
+                "value": {
+                  "code": 400,
+                  "message": "Error while creating job: 'calmConfig' object cannot be empty",
+                  "type": "Bad Request/Invalid Request",
+                  "detailedError": "Error while creating job: 'calmConfig' object cannot be empty"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "code": 401,
+              "message": "Unauthorized",
+              "type": "Authentication Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "code": 403,
+              "message": "Forbidden",
+              "detailedError": "You are not authorized to perform this operation",
+              "type": "Forbidden Request"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "code": 404,
+              "message": "Not Found",
+              "type": "Resource Not Found"
+            }
+          }
+        }
+      },
+      "RequestTooLarge": {
+        "description": "Request entity too large (exceeds 100KB limit)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "code": 413,
+              "message": "Request entity too large",
+              "type": "Request Too Large"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests - client rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "description": "Number of seconds after which the request should be retried",
+            "schema": {
+              "type": "integer",
+              "example": 60
+            }
+          },
+          "throttling": {
+            "description": "Number of milliseconds by which the response was delayed",
+            "schema": {
+              "type": "integer",
+              "example": 1250
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "code": 429,
+              "message": "Too many requests",
+              "type": "Rate Limit Exceeded"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Service unavailable - absolute rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "description": "Number of seconds after which the request should be retried",
+            "schema": {
+              "type": "integer",
+              "example": 60
+            }
+          },
+          "throttling": {
+            "description": "Number of milliseconds by which the response was delayed",
+            "schema": {
+              "type": "integer",
+              "example": 5000
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "code": 503,
+              "message": "Service Unavailable",
+              "type": "Service Unavailable"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CreateJobRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "action",
+          "active",
+          "httpMethod",
+          "endTime",
+          "schedules"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the job. Name must not contain special characters or only numbers.\nMust be unique for the technical user.\n",
+            "example": "validateSalesOrder",
+            "pattern": "^(?![0-9]+$)[a-zA-Z0-9_-]+$"
+          },
+          "description": {
+            "type": "string",
+            "description": "Provides more details about the job",
+            "example": "cron job that validates sales order requests"
+          },
+          "action": {
+            "type": "string",
+            "format": "uri",
+            "description": "The fully qualified URL endpoint to be called when the job runs.\nMust use HTTPS for production scenarios to encrypt data during communication.\n",
+            "example": "https://salesOrderApp.hana.ondemand.com:40023/salesOrders/validate"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activation status of the job",
+            "default": false,
+            "example": true
+          },
+          "httpMethod": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE"
+            ],
+            "description": "The HTTP method to be used to call the job action endpoint URL",
+            "example": "PUT"
+          },
+          "startTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              },
+              {
+                "nullable": true
+              }
+            ],
+            "description": "Start time for the job. The scheduler respects the start time of both the schedule and the job.\nCan be ISO 8601 string, custom format object, or null.\n"
+          },
+          "endTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              },
+              {
+                "nullable": true
+              }
+            ],
+            "description": "End time for the job. The scheduler respects the end time of both the schedule and the job.\nCan be ISO 8601 string, custom format object, or null.\n"
+          },
+          "ansConfig": {
+            "$ref": "#/components/schemas/ANSConfig"
+          },
+          "calmConfig": {
+            "$ref": "#/components/schemas/CalmConfig"
+          },
+          "schedules": {
+            "type": "array",
+            "description": "Contains one or more job schedules to be created",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/CreateScheduleRequest"
+            }
+          }
+        }
+      },
+      "UpdateJobRequest": {
+        "type": "object",
+        "required": [
+          "description",
+          "active",
+          "action",
+          "httpMethod",
+          "endTime"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Sets the description of the job",
+            "example": "Updated job description"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Determines if a job must be activated or deactivated",
+            "example": true
+          },
+          "action": {
+            "type": "string",
+            "format": "uri",
+            "description": "Sets the job action URL",
+            "example": "https://api.example.com/updated-endpoint"
+          },
+          "httpMethod": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE"
+            ],
+            "description": "HTTP method of the job action endpoint URL",
+            "example": "POST"
+          },
+          "startTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              },
+              {
+                "nullable": true
+              }
+            ],
+            "description": "Start time for the job"
+          },
+          "endTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              },
+              {
+                "nullable": true
+              }
+            ],
+            "description": "End time for the job"
+          },
+          "ansConfig": {
+            "$ref": "#/components/schemas/ANSConfig"
+          },
+          "calmConfig": {
+            "$ref": "#/components/schemas/CalmConfig"
+          }
+        }
+      },
+      "CreateScheduleRequest": {
+        "type": "object",
+        "required": [
+          "active"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Data value passed to the job action endpoint when invoked by Job Scheduler.\nFor PUT/POST methods, sent in request body. For GET/DELETE methods, sent as query strings.\n",
+            "example": {
+              "salesOrderId": "1234",
+              "priority": "high"
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Provides more details about the schedule",
+            "example": "this schedule runs every 10 minutes"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activation status of the job schedule",
+            "example": true
+          },
+          "startTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              }
+            ],
+            "description": "Start time for the job schedule",
+            "example": {
+              "date": "2015-10-20 04:30 +0000",
+              "format": "YYYY-MM-DD HH:mm Z"
+            }
+          },
+          "endTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              }
+            ],
+            "description": "End time for the job schedule"
+          },
+          "cron": {
+            "type": "string",
+            "description": "Crontab pattern for triggering the schedule.\nFormat: second minute hour day month weekday year\nExample: \"* * * * * */10 0\" (every 10 seconds)\n",
+            "example": "* * * * * */10 0"
+          },
+          "time": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              }
+            ],
+            "description": "For one-time schedules, denotes the task execution time.\nCan use human-readable text like \"3.30pm\", \"tomorrow at 2am\", \"now\".\n",
+            "example": "tomorrow at 2am"
+          },
+          "repeatInterval": {
+            "type": "string",
+            "description": "Used to run schedules repeatedly at some interval.\nHuman-readable format like \"2 hours\", \"30 minutes\", \"1 day\".\n",
+            "example": "2 hours"
+          },
+          "repeatAt": {
+            "type": "string",
+            "description": "For recurring schedules, denotes the exact time when the job schedule must run.\nHuman-readable format complying with human-readable date rules.\n",
+            "example": "09:00"
+          }
+        }
+      },
+      "UpdateScheduleRequest": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Data value passed to the job action endpoint",
+            "example": {
+              "memory_in_mb": 2048,
+              "disk_in_mb": 256
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Provides more details about the schedule",
+            "example": "Updated schedule description"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activation status of the job schedule",
+            "example": true
+          },
+          "startTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              }
+            ],
+            "description": "Start time for the job schedule"
+          },
+          "endTime": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              }
+            ],
+            "description": "End time for the job schedule"
+          },
+          "cron": {
+            "type": "string",
+            "description": "Crontab pattern (cannot change from/to other scheduling modes)",
+            "example": "0 0 12 * * ?"
+          },
+          "time": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/DateTimeObject"
+              }
+            ],
+            "description": "One-time execution time"
+          },
+          "repeatInterval": {
+            "type": "string",
+            "description": "Repeat interval for recurring schedules",
+            "example": "4 hours"
+          },
+          "repeatAt": {
+            "type": "string",
+            "description": "Exact time for recurring schedules",
+            "example": "10:30"
+          }
+        }
+      },
+      "JobResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "validateSalesOrder"
+          },
+          "description": {
+            "type": "string",
+            "example": "cron job that validates sales order requests"
+          },
+          "action": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://salesOrderApp.hana.ondemand.com:40023/salesOrders/validate"
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          },
+          "httpMethod": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE"
+            ],
+            "example": "PUT"
+          },
+          "user": {
+            "type": "string",
+            "nullable": true,
+            "example": "abc"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ansConfig": {
+            "$ref": "#/components/schemas/ANSConfig"
+          },
+          "calmConfig": {
+            "$ref": "#/components/schemas/CalmConfig"
+          },
+          "signatureVersion": {
+            "type": "integer",
+            "example": 0
+          },
+          "_id": {
+            "type": "integer",
+            "description": "Unique identifier for the job",
+            "example": 3
+          },
+          "jobType": {
+            "type": "string",
+            "enum": [
+              "HTTP_ENDPOINT",
+              "CF_TASK"
+            ],
+            "example": "HTTP_ENDPOINT"
+          },
+          "subDomain": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "1970-01-01 12:55:55"
+          },
+          "ACTIVECOUNT": {
+            "type": "integer",
+            "description": "Number of active schedules",
+            "example": 0
+          },
+          "INACTIVECOUNT": {
+            "type": "integer",
+            "description": "Number of inactive schedules",
+            "example": 2
+          },
+          "schedules": {
+            "type": "array",
+            "description": "Job schedules (included when displaySchedules=true)",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleResponse"
+            }
+          }
+        }
+      },
+      "ScheduleResponse": {
+        "type": "object",
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the schedule",
+            "example": "cb5c9def-e2a0-4294-8a51-61e4db373f99"
+          },
+          "description": {
+            "type": "string",
+            "example": "this schedule runs every 10 minutes"
+          },
+          "data": {
+            "type": "string",
+            "description": "JSON string of data passed to the endpoint",
+            "example": "{\"salesOrderId\":\"1234\"}"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "recurring",
+              "one-time"
+            ],
+            "example": "recurring"
+          },
+          "cron": {
+            "type": "string",
+            "nullable": true,
+            "example": "* * * * * */10 0"
+          },
+          "time": {
+            "type": "string",
+            "nullable": true
+          },
+          "repeatInterval": {
+            "type": "string",
+            "nullable": true,
+            "example": "2 hours"
+          },
+          "repeatAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2015-10-20 04:30:00"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "nextRunAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Next scheduled execution time",
+            "example": "2017-08-11 10:00:00"
+          },
+          "jobId": {
+            "type": "integer",
+            "description": "ID of the parent job",
+            "example": 3
+          }
+        }
+      },
+      "ScheduleWithLogsResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ScheduleResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "logs": {
+                "type": "array",
+                "description": "Run logs for the schedule (included when displayLogs=true)",
+                "items": {
+                  "$ref": "#/components/schemas/RunLogResponse"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "RunLogResponse": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the run",
+            "example": "56468DB7B133728EE10000000A61A0D8"
+          },
+          "runText": {
+            "type": "string",
+            "description": "Details about the run execution",
+            "example": "Sales order processed"
+          },
+          "httpStatus": {
+            "type": "integer",
+            "nullable": true,
+            "description": "HTTP status code returned by the endpoint",
+            "example": 200
+          },
+          "executionTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the scheduler actually invoked the endpoint",
+            "example": "2015-11-14T04:19:22"
+          },
+          "runStatus": {
+            "type": "string",
+            "enum": [
+              "SCHEDULED",
+              "COMPLETED",
+              "RUNNING"
+            ],
+            "description": "Current status of the run",
+            "example": "COMPLETED"
+          },
+          "runState": {
+            "type": "string",
+            "enum": [
+              "SCHEDULED",
+              "SUCCESS",
+              "ERROR",
+              "REQUEST_ERROR"
+            ],
+            "description": "State of the run execution",
+            "example": "SUCCESS"
+          },
+          "scheduleTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the schedule was picked up for execution",
+            "example": "2015-11-14T04:17:22"
+          },
+          "completionTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the scheduler received response from the endpoint",
+            "example": "2015-11-14T04:19:22"
+          }
+        }
+      },
+      "JobListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of jobs available",
+            "example": 5
+          },
+          "results": {
+            "type": "array",
+            "description": "Array of job objects",
+            "items": {
+              "$ref": "#/components/schemas/JobResponse"
+            }
+          },
+          "prev_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL for the previous page"
+          },
+          "next_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL for the next page",
+            "example": "/scheduler/jobs/?page_size=1&offset=1"
+          }
+        }
+      },
+      "ScheduleListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of schedules available",
+            "example": 2
+          },
+          "results": {
+            "type": "array",
+            "description": "Array of schedule objects",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleResponse"
+            }
+          },
+          "prev_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL for the previous page",
+            "example": "/scheduler/jobs/27/schedules?page_size=1"
+          },
+          "next_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL for the next page"
+          }
+        }
+      },
+      "RunLogListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of run logs available",
+            "example": 6
+          },
+          "results": {
+            "type": "array",
+            "description": "Array of run log objects",
+            "items": {
+              "$ref": "#/components/schemas/RunLogResponse"
+            }
+          }
+        }
+      },
+      "DateTimeObject": {
+        "type": "object",
+        "description": "Custom date-time format object",
+        "required": [
+          "date"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date string in the specified format",
+            "example": "2015-10-20 04:30 +0000"
+          },
+          "format": {
+            "type": "string",
+            "description": "Format pattern for the date string",
+            "example": "YYYY-MM-DD HH:mm Z"
+          }
+        }
+      },
+      "ANSConfig": {
+        "type": "object",
+        "description": "Configuration for SAP Alert Notification Service integration",
+        "properties": {
+          "onSuccess": {
+            "type": "boolean",
+            "description": "Send success alert notification",
+            "default": false,
+            "example": false
+          },
+          "onError": {
+            "type": "boolean",
+            "description": "Send error alert notification",
+            "default": false,
+            "example": true
+          },
+          "onDelay": {
+            "type": "boolean",
+            "description": "Send delay alert notification",
+            "default": false,
+            "example": false
+          }
+        }
+      },
+      "CalmConfig": {
+        "type": "object",
+        "description": "Configuration for SAP Cloud ALM integration",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable monitoring jobs in the SAP Cloud ALM dashboard",
+            "default": false,
+            "example": true
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Invalid request"
+          },
+          "type": {
+            "type": "string",
+            "description": "Error type",
+            "example": "Bad Request/Invalid Request"
+          },
+          "detailedError": {
+            "type": "string",
+            "description": "Detailed error description",
+            "example": "The specified parameter is invalid"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Jobs",
+      "description": "Job management operations"
+    },
+    {
+      "name": "Schedules",
+      "description": "Job schedule management operations"
+    },
+    {
+      "name": "Run Logs",
+      "description": "Job execution history and logging operations"
+    }
+  ],
+  "externalDocs": {
+    "description": "SAP Job Scheduling Service Documentation",
+    "url": "https://help.sap.com/docs/JOB_SCHEDULER/07b57c2f4b944bcd8470d024723a1631?locale=en-US&state=PRODUCTION&version=Cloud"
+  }
+}

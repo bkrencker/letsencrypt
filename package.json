@@ -1,0 +1,96 @@
+{
+  "name": "letsencrypt",
+  "version": "1.0.0",
+  "description": "A simple CAP project.",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@sap/xsenv": "^6",
+    "@sap/xssec": "^4",
+    "acme-client": "^5.0.0",
+    "axios": "^1.2.0",
+    "express": "^5",
+    "passport": "^0"
+  },
+  "devDependencies": {
+    "@sap/ux-specification": "^1.136"
+  },
+  "scripts": {
+    "login": "cf api https://api.cf.eu10.hana.ondemand.com && cf login --sso",
+    "login004": "cf api https://api.cf.eu10-004.hana.ondemand.com && cf login --sso",
+    "start": "cds-serve",
+    "watch-certificates": "cds watch --open certificates/webapp/index.html?sap-ui-xx-viewCache=false",
+    "build": "mbt build -p cf",
+    "deploy": "cf deploy mta_archives/letsencrypt_1.0.0.mtar",
+    "buildDeploy": "mbt build -p cf && cf deploy mta_archives/letsencrypt_1.0.0.mtar",
+    "deploySrv": "cf deploy mta_archives/letsencrypt_1.0.0.mtar -m letsencrypt-srv",
+    "logSrv": "cf logs letsencrypt-srv",
+    "bindCustomDomainService": "cds bind --to custom-domain-service --for hybrid",
+    "bindDestinationService": "cds bind --to letsencrypt-destination --for hybrid",
+    "bindJobSchedulingService": "cds bind --to jobscheduler --for hybrid",
+    "cdsWatchHybrid": "DEBUG=custom cds watch --profile hybrid --open certificates/webapp/index.html?sap-ui-xx-viewCache=false",
+    "cfEnvToDefault": "node scripts/extract-cf-env.js letsencrypt-srv default-env.json"
+  },
+  "engines": {
+    "node": "^24"
+  },
+  "eslintConfig": {
+    "extends": "eslint:recommended",
+    "env": {
+      "es2020": true,
+      "node": true,
+      "jest": true,
+      "mocha": true
+    },
+    "globals": {
+      "SELECT": true,
+      "INSERT": true,
+      "UPDATE": true,
+      "DELETE": true,
+      "CREATE": true,
+      "DROP": true,
+      "CDL": true,
+      "CQL": true,
+      "CXL": true,
+      "cds": true
+    },
+    "rules": {
+      "no-console": "off",
+      "require-atomic-updates": "off"
+    }
+  },
+  "sapux": [
+    "app/certificates",
+    "app/certificates"
+  ],
+  "cds": {
+    "requires": {
+      "db": false,
+      "[production]": {
+        "auth": {
+          "kind": "xsuaa"
+        },
+        "approuter": {
+          "kind": "cloudfoundry"
+        }
+      },
+      "[hybrid]": {
+        "auth": {
+          "kind": "mocked",
+          "users": {
+            "alice": {
+              "roles": [
+                "jobscheduler"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "customDomain": {
+    "email": "dev@example.com"
+  }
+}

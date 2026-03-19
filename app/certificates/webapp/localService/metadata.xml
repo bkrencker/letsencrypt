@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+    <edmx:Reference Uri="https://oasis-tcs.github.io/odata-vocabularies/vocabularies/Org.OData.Capabilities.V1.xml">
+        <edmx:Include Alias="Capabilities" Namespace="Org.OData.Capabilities.V1"/>
+    </edmx:Reference>
+    <edmx:DataServices>
+        <Schema Namespace="CatalogService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+            <EntityContainer Name="EntityContainer">
+                <EntitySet Name="Books" EntityType="CatalogService.Books"/>
+                <EntitySet Name="Certificates" EntityType="CatalogService.Certificates"/>
+            </EntityContainer>
+            <EntityType Name="Books">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Int32" Nullable="false"/>
+                <Property Name="title" Type="Edm.String"/>
+                <Property Name="stock" Type="Edm.Int32"/>
+            </EntityType>
+            <EntityType Name="Certificates">
+                <Key>
+                    <PropertyRef Name="GUID"/>
+                </Key>
+                <Property Name="GUID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="alias" Type="Edm.String"/>
+                <Property Name="status" Type="Edm.String"/>
+                <Property Name="date_begin" Type="Edm.DateTimeOffset"/>
+                <Property Name="date_end" Type="Edm.DateTimeOffset"/>
+                <Property Name="expiration_severity" Type="Edm.String"/>
+                <Property Name="expiration_days" Type="Edm.Int32"/>
+                <Property Name="expiration_percent" Type="Edm.Int32"/>
+                <Property Name="expired" Type="Edm.Boolean"/>
+                <Property Name="sans" Type="Collection(CatalogService.Certificates_sans)" Nullable="false"/>
+            </EntityType>
+            <ComplexType Name="Certificates_sans">
+                <Property Name="alias" Type="Edm.String"/>
+            </ComplexType>
+            <Annotations Target="CatalogService.EntityContainer/Books">
+                <Annotation Term="Capabilities.DeleteRestrictions">
+                    <Record Type="Capabilities.DeleteRestrictionsType">
+                        <PropertyValue Property="Deletable" Bool="false"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Capabilities.InsertRestrictions">
+                    <Record Type="Capabilities.InsertRestrictionsType">
+                        <PropertyValue Property="Insertable" Bool="false"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Capabilities.UpdateRestrictions">
+                    <Record Type="Capabilities.UpdateRestrictionsType">
+                        <PropertyValue Property="Updatable" Bool="false"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+            <Annotations Target="CatalogService.EntityContainer/Certificates">
+                <Annotation Term="Capabilities.DeleteRestrictions">
+                    <Record Type="Capabilities.DeleteRestrictionsType">
+                        <PropertyValue Property="Deletable" Bool="false"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Capabilities.InsertRestrictions">
+                    <Record Type="Capabilities.InsertRestrictionsType">
+                        <PropertyValue Property="Insertable" Bool="false"/>
+                    </Record>
+                </Annotation>
+                <Annotation Term="Capabilities.UpdateRestrictions">
+                    <Record Type="Capabilities.UpdateRestrictionsType">
+                        <PropertyValue Property="Updatable" Bool="false"/>
+                    </Record>
+                </Annotation>
+            </Annotations>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>

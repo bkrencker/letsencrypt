@@ -1,0 +1,47 @@
+###########################################################
+### LOCAL TESTS
+###########################################################
+
+### Test the ACME-challenge URL locally
+GET http://localhost:4004/.well-known/acme-challenge/test.txt
+
+###
+GET http://localhost:4004/.well-known/acme-challenge/buUS1PpoJKADxTx25urBX_jmjiJqwYdzBOKEjCQFkjM
+
+###########################################################
+### CLOUD FOUNDRY TESTS
+###########################################################
+
+### Bind the Route with following settings:
+###    path:   /.well-known/acme-challenge/ 
+###    domain: test3.apps.example.com 
+### then bind it to the application where the Node.js Express Server is running on
+### Afterwards, use this GET request to test the URL
+GET https://test3.apps.example.com/.well-known/acme-challenge/test.txt
+
+### The acme-client will talk to Let's Encrypt to get the Challenge. 
+### The challenge is then written to the webserver's file system.
+### Afterwards, Let's Encrypt sends a Request to the URL in order to check if the File is 
+### there and therefore the Domain is under my control.
+### Finally, the certificate chain is created and sent to the acme-client.
+GET https://test3.apps.example.com/.well-known/acme-challenge/c9tgzqGt9vQIsog3vAzLyigjqH0TlG1NXI37vKqIryQ
+
+###########################################################
+### SCHEDULER FUNCTION TESTS
+###########################################################
+
+### Renew certificates in test mode (no productive certificate creation)
+GET http://localhost:4004/catalog/renewCertificates(test=true)
+Authorization: Basic YWxpY2U6
+
+### Renew certificates in productive mode
+GET http://localhost:4004/catalog/renewCertificates
+Authorization: Basic YWxpY2U6
+
+### Delete expired certificates in test mode (no productive deletion)
+GET http://localhost:4004/catalog/deleteExpiredCertificates(test=true)
+Authorization: Basic YWxpY2U6
+
+### Delete expired certificates in productive mode
+GET http://localhost:4004/catalog/deleteExpiredCertificates
+Authorization: Basic YWxpY2U6

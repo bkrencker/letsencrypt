@@ -1,0 +1,127 @@
+{
+    "subscriptions": {
+        "actions": [
+            {
+                "type": "EMAIL",
+                "name": "EmailToDev",
+                "state": "ENABLED",
+                "description": "Send Alert E-Mail to dev Mailbox",
+                "properties": {
+                    "destination": "alerts@example.com",
+                    "useHtml": "false"
+                }
+            }
+        ],
+        "conditions": [
+            {
+                "name": "AppCrash",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "CONTAINS",
+                "propertyValue": "app.crash",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "AppProcessCrash",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "CONTAINS",
+                "propertyValue": "audit.app.process.crash",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "AppUpdate",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "CONTAINS",
+                "propertyValue": "audit.app.update",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "ExcludeSeverityINFO",
+                "mandatory": false,
+                "propertyKey": "severity",
+                "predicate": "DOES_NOT_CONTAIN",
+                "propertyValue": "INFO",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "JobSchedulerJobExecution",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "EQUALS",
+                "propertyValue": "JobSchedulerJobExecution",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "ServerCertificateExpiration",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "EQUALS",
+                "propertyValue": "ServerCertificateExpiration",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "TLSConfigurationCipherDeprecation",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "EQUALS",
+                "propertyValue": "TLSConfigurationCipherDeprecation",
+                "labels": [],
+                "description": ""
+            },
+            {
+                "name": "TrustedRootCertificateExpiration",
+                "mandatory": false,
+                "propertyKey": "eventType",
+                "predicate": "EQUALS",
+                "propertyValue": "TrustedRootCertificateExpiration",
+                "labels": [],
+                "description": ""
+            }
+        ],
+        "subscriptions": [
+            {
+                "name": "ApplicationCrash",
+                "conditions": [
+                    "AppCrash",
+                    "AppProcessCrash"
+                ],
+                "actions": [
+                    "EmailToDev"
+                ],
+                "state": "ENABLED",
+                "description": "Send Alert if Application has Problems"
+            },
+            {
+                "name": "CustomDomain",
+                "conditions": [
+                    "ServerCertificateExpiration",
+                    "TLSConfigurationCipherDeprecation",
+                    "TrustedRootCertificateExpiration"
+                ],
+                "actions": [
+                    "EmailToDev"
+                ],
+                "state": "ENABLED"
+            },
+            {
+                "name": "JobScheduling",
+                "conditions": [
+                    "JobSchedulerJobExecution"
+                ],
+                "actions": [
+                    "EmailToDev"
+                ],
+                "state": "ENABLED"
+            }
+        ]
+    },
+    "enableCloudControllerAuditEvents": true
+}

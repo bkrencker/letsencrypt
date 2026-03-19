@@ -1,0 +1,52 @@
+<core:FragmentDefinition
+    xmlns:core="sap.ui.core"
+    xmlns:m="sap.m"
+    xmlns:suite="sap.suite.ui.commons">
+    <m:VBox width="100%" class="sapUiSmallMarginTopBottom">
+        <suite:ProcessFlow foldedCorners="false" scrollable="false" showLabels="false">
+            <suite:lanes>
+                <suite:ProcessFlowLaneHeader laneId="csr" position="0" text="{i18n>businessFlowStepCsr}" />
+                <suite:ProcessFlowLaneHeader laneId="activation" position="1" text="{i18n>businessFlowStepActivation}" />
+                <suite:ProcessFlowLaneHeader laneId="expired" position="2" text="{i18n>businessFlowStepExpired}" />
+            </suite:lanes>
+            <suite:nodes>
+                <suite:ProcessFlowNode
+                    nodeId="csrNode"
+                    laneId="csr"
+                    children="{= ['activationNode'] }"
+                    title="{i18n>businessFlowStepCsr}"
+                    state="{= ${status} === 'csrInProgress' ? 'Neutral' : (${status} === 'csrCreated' || ${status} === 'deactivationInProgress' || ${status} === 'inactive' || ${status} === 'active' || ${status} === 'expired' || ${expired} === true ? 'Positive' : 'Planned') }"
+                    stateText="{= ${status} === 'csrInProgress' ? ${i18n>businessFlowStepCsrInProgress} : (${status} === 'csrCreated' || ${status} === 'deactivationInProgress' || ${status} === 'inactive' || ${status} === 'active' || ${status} === 'expired' || ${expired} === true ? ${i18n>businessFlowStepCsrCreated} : '') }" />
+                <suite:ProcessFlowNode
+                    nodeId="activationNode"
+                    laneId="activation"
+                    children="{= ['expiredNode'] }"
+                    title="{i18n>businessFlowStepActivation}"
+                    state="{= ${status} === 'deactivationInProgress' ? 'Neutral' : (${status} === 'inactive' ? 'Critical' : (${status} === 'active' || ${status} === 'expired' || ${expired} === true ? 'Positive' : 'Planned')) }"
+                    stateText="{= ${status} === 'deactivationInProgress' ? ${i18n>businessFlowStepDeactivationInProgress} : (${status} === 'inactive' ? ${i18n>businessFlowStepInactive} : (${status} === 'active' || ${status} === 'expired' || ${expired} === true ? ${i18n>businessFlowStepActive} : '')) }" />
+                <suite:ProcessFlowNode
+                    nodeId="expiredNode"
+                    laneId="expired"
+                    title="{i18n>businessFlowStepExpired}"
+                    state="{= ${status} === 'expired' || ${expired} === true ? 'Negative' : 'Planned' }"
+                    stateText="{= ${status} === 'expired' || ${expired} === true ? ${i18n>businessFlowStepExpired} : '' }" />
+            </suite:nodes>
+        </suite:ProcessFlow>
+
+        <m:HBox width="100%" renderType="Bare" class="sapUiTinyMarginTop">
+            <m:VBox width="100%" renderType="Bare">
+                <m:ObjectStatus
+                    title="{i18n>businessFlowCurrentStatusName}"
+                    text="{= ${status} === 'csrInProgress' ? ${i18n>businessFlowStepCsrInProgress} : (${status} === 'csrCreated' ? ${i18n>businessFlowStepCsrCreated} : (${status} === 'deactivationInProgress' ? ${i18n>businessFlowStepDeactivationInProgress} : (${status} === 'inactive' ? ${i18n>businessFlowStepInactive} : (${status} === 'active' ? ${i18n>businessFlowStepActive} : (${status} === 'expired' || ${expired} === true ? ${i18n>businessFlowStepExpired} : ${status} )))) ) }"
+                    state="{= ${status} === 'expired' || ${expired} === true ? 'Error' : (${status} === 'deactivationInProgress' ? 'Information' : (${status} === 'inactive' ? 'Warning' : (${status} === 'active' || ${status} === 'csrCreated' ? 'Success' : (${status} === 'csrInProgress' ? 'Information' : 'None')))) }" />
+                <m:ObjectStatus
+                    title="{i18n>businessFlowCurrentStatusCode}"
+                    text="{status}" />
+                <m:ObjectStatus
+                    title="{i18n>businessFlowExpiredFlag}"
+                    text="{= ${expired} === true ? ${i18n>businessFlowDetailsExpiredYes} : ${i18n>businessFlowDetailsExpiredNo} }"
+                    state="{= ${expired} === true ? 'Error' : 'Success' }" />
+            </m:VBox>
+        </m:HBox>
+    </m:VBox>
+</core:FragmentDefinition>

@@ -1,0 +1,266 @@
+{
+    "_version": "1.45.0",
+    "sap.app": {
+        "id": "certificates",
+        "type": "application",
+        "i18n": "i18n/i18n.properties",
+        "applicationVersion": {
+            "version": "0.0.1"
+        },
+        "title": "{{appTitle}}",
+        "description": "{{appDescription}}",
+        "resources": "resources.json",
+        "sourceTemplate": {
+            "id": "@sap/generator-fiori:lrop",
+            "version": "1.8.0",
+            "toolsId": "82006654-c8f1-4db3-abfe-ca431640de82"
+        },
+        "dataSources": {
+            "mainService": {
+                "uri": "/catalog/",
+                "type": "OData",
+                "settings": {
+                    "annotations": [
+                        "annotation"
+                    ],
+                    "localUri": "localService/metadata.xml",
+                    "odataVersion": "4.0"
+                }
+            },
+            "annotation": {
+                "type": "ODataAnnotation",
+                "uri": "annotations/annotation.xml",
+                "settings": {
+                    "localUri": "annotations/annotation.xml"
+                }
+            }
+        }
+    },
+    "sap.ui": {
+        "technology": "UI5",
+        "icons": {
+            "icon": "",
+            "favIcon": "",
+            "phone": "",
+            "phone@2": "",
+            "tablet": "",
+            "tablet@2": ""
+        },
+        "deviceTypes": {
+            "desktop": true,
+            "tablet": true,
+            "phone": true
+        }
+    },
+    "sap.ui5": {
+        "flexEnabled": false,
+        "dependencies": {
+            "minUI5Version": "1.108.0",
+            "libs": {
+                "sap.m": {},
+                "sap.ui.core": {},
+                "sap.ushell": {},
+                "sap.fe.templates": {},
+                "sap.f": {},
+                "sap.suite.ui.commons": {}
+            }
+        },
+        "contentDensities": {
+            "compact": true,
+            "cozy": false
+        },
+        "models": {
+            "i18n": {
+                "type": "sap.ui.model.resource.ResourceModel",
+                "settings": {
+                    "bundleName": "certificates.i18n.i18n"
+                }
+            },
+            "": {
+                "dataSource": "mainService",
+                "preload": true,
+                "settings": {
+                    "synchronizationMode": "None",
+                    "operationMode": "Server",
+                    "autoExpandSelect": true,
+                    "earlyRequests": true
+                }
+            },
+            "@i18n": {
+                "type": "sap.ui.model.resource.ResourceModel",
+                "uri": "i18n/i18n.properties"
+            }
+        },
+        "resources": {
+            "css": []
+        },
+        "routing": {
+            "routes": [
+                {
+                    "pattern": ":?query:",
+                    "name": "CertificatesList",
+                    "target": [
+                        "CertificatesList"
+                    ]
+                },
+                {
+                    "pattern": "Certificates({key}):?query:",
+                    "name": "CertificatesObjectPage",
+                    "target": [
+                        "CertificatesList",
+                        "CertificatesObjectPage"
+                    ]
+                }
+            ],
+            "targets": {
+                "CertificatesList": {
+                    "type": "Component",
+                    "id": "CertificatesList",
+                    "name": "sap.fe.templates.ListReport",
+                    "options": {
+                        "settings": {
+                            "entitySet": "Certificates",
+                            "enhanceI18n": "i18n/i18n.properties",
+                            "variantManagement": "None",
+                            "navigation": {
+                                "Certificates": {
+                                    "detail": {
+                                        "route": "CertificatesObjectPage"
+                                    }
+                                }
+                            },
+                            "initialLoad": "Enabled",
+                            "controlConfiguration": {
+                                "@com.sap.vocabularies.UI.v1.LineItem": {
+                                    "tableSettings": {
+                                        "selectionMode": "Multi",
+                                        "enableExport": true,
+                                        "selectAll": true,
+                                        "personalization": {
+                                            "column": false,
+                                            "filter": false,
+                                            "sort": false
+                                        },
+                                        "quickVariantSelection": {
+                                            "hideTableTitle": false,
+                                            "showCounts": false
+                                        },
+                                        "condensedTableLayout": true
+                                    },
+                                    "actions": {
+                                        "MenuActions": {
+                                            "text": "Scheduler",
+                                            "menu": [
+                                                "DataFieldForAction::CatalogService.EntityContainer::checkRenewCertificatesScheduler",
+                                                "DataFieldForAction::CatalogService.EntityContainer::enableRenewCertificatesScheduler",
+                                                "DataFieldForAction::CatalogService.EntityContainer::disableRenewCertificatesScheduler",
+                                                "DataFieldForAction::CatalogService.EntityContainer::createRenewCertificatesScheduler",
+                                                "DataFieldForAction::CatalogService.EntityContainer::deleteRenewCertificatesScheduler"
+                                            ]
+                                        }
+                                    },
+                                    "columns": {
+                                        "DataField::alias": {
+                                            "width": "18rem"
+                                        },
+                                        "DataField::domain": {
+                                            "width": "14rem"
+                                        },
+                                        "DataField::landscape": {
+                                            "width": "8rem"
+                                        },
+                                        "DataFieldForAnnotation::DataPoint::expiration_percent": {
+                                            "width": "12rem"
+                                        },
+                                        "DataField::status": {
+                                            "width": "10rem"
+                                        },
+                                        "BusinessFlowColumn": {
+                                            "header": "{i18n>businessFlow}",
+                                            "width": "8rem",
+                                            "position": {
+                                                "placement": "After",
+                                                "anchor": "DataField::status"
+                                            },
+                                            "template": "certificates.ext.fragment.BusinessFlow",
+                                            "availability": "Default",
+                                            "properties": [
+                                                "status",
+                                                "expired"
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "controlAggregation": "beginColumnPages",
+                    "contextPattern": ""
+                },
+                "CertificatesObjectPage": {
+                    "type": "Component",
+                    "id": "CertificatesObjectPage",
+                    "name": "sap.fe.templates.ObjectPage",
+                    "options": {
+                        "settings": {
+                            "editableHeaderContent": false,
+                            "entitySet": "Certificates",
+                            "enhanceI18n": "i18n/i18n.properties",
+                            "variantManagement": "None",
+                            "sectionLayout": "Page",
+                            "showRelatedApps": false,
+                            "content": {
+                                "body": {
+                                    "sections": {
+                                        "BusinessFlowDetails": {
+                                            "title": "{i18n>businessFlowSectionTitle}",
+                                            "template": "certificates.ext.fragment.ObjectPageBusinessFlow"
+                                        }
+                                    }
+                                }
+                            },
+                            "controlConfiguration": {
+                                "sans/@com.sap.vocabularies.UI.v1.LineItem#Domains": {
+                                    "tableSettings": {
+                                        "enableExport": false,
+                                        "enableFullScreen": false,
+                                        "enablePaste": false,
+                                        "selectAll": false,
+                                        "selectionMode": "None",
+                                        "personalization": {
+                                            "column": false,
+                                            "filter": false,
+                                            "sort": false
+                                        },
+                                        "quickVariantSelection": {
+                                            "showCounts": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "controlAggregation": "midColumnPages",
+                    "contextPattern": "/Certificates({key})"
+                }
+            },
+            "config": {
+                "flexibleColumnLayout": {
+                    "defaultTwoColumnLayoutType": "TwoColumnsBeginExpanded",
+                    "defaultThreeColumnLayoutType": "ThreeColumnsMidExpanded"
+                },
+                "routerClass": "sap.f.routing.Router"
+            }
+        },
+        "rootView": {
+            "viewName": "sap.fe.templates.RootContainer.view.Fcl",
+            "type": "XML",
+            "async": true,
+            "id": "appRootView"
+        }
+    },
+    "sap.fiori": {
+        "registrationIds": [],
+        "archeType": "transactional"
+    }
+}

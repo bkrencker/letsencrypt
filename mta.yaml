@@ -1,0 +1,107 @@
+_schema-version: '3.1'
+ID: letsencrypt
+version: 1.0.0
+description: "A simple CAP project."
+
+parameters:
+  enable-parallel-deployments: true
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npx -p @sap/cds-dk cds build --production
+modules:
+  - name: letsencrypt-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      keep-existing-routes: true # keep routes which are already defined for some domains
+      buildpack: nodejs_buildpack
+      memory: 120MB
+    build-parameters:
+      builder: npm-ci
+    provides:
+      - name: srv-api # required by consumers of CAP services (e.g. approuter)
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: letsencrypt-auth
+      - name: custom-domain-service
+      - name: letsencrypt-destination
+      - name: letsencrypt-scheduler
+      - name: letsencrypt-alerting
+
+  - name: letsencrypt-app
+    type: approuter.nodejs
+    path: app/ # from cds.env.folders. Consider also cds.env.build.target -> gen/app
+    parameters:
+      keep-existing-routes: true
+      disk-quota: 256M
+      memory: 80MB
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          name: srv-api # must be used in xs-app.json as well
+          url: ~{srv-url}
+          forwardAuthToken: true
+      - name: letsencrypt-auth
+      - name: letsencrypt-alerting
+
+resources:
+  - name: letsencrypt-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: letsencrypt-${org}-${space}
+        tenant-mode: dedicated
+
+  - name: custom-domain-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: INFRA
+      service-plan: custom_domains
+
+  - name: letsencrypt-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service-plan: lite
+      service: destination
+      config:
+        init_data:
+          instance:
+            existing_destinations_policy: ignore
+            destinations:
+              - Name: cf_api
+                Description: CF API
+                Authentication: OAuth2Password
+                User: "" # add your technical user that is created on IAS
+                Password: "" # password of your technical user     
+                login_hint: '{"origin":"xyz-platform"}' # add your IAS platform name
+                clientId: "cf" # there is no client secret!                      
+                tokenServiceURL: https://login.cf.eu10.hana.ondemand.com/oauth/token # not necessary
+                ProxyType: Internet
+                Type: HTTP
+                URL: https://api.cf.eu10.hana.ondemand.com # not necessary
+
+  - name: letsencrypt-scheduler
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: jobscheduler
+      service-plan: standard  # minimum schedule frequency of 5 minutes.
+      service-name: jobscheduler
+      config:
+          enable-xsuaa-support: true                
+
+  # App Alerting
+  # -> do not forget to add sap_cp_eu10_ans@sap.com as Auditor to the Space
+  - name: letsencrypt-alerting
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: alert-notification
+      service-plan: standard
+      path: ./alert-config.json          

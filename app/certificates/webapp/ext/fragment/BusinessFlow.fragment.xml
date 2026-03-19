@@ -1,0 +1,20 @@
+<core:FragmentDefinition
+    xmlns:core="sap.ui.core"
+    xmlns:suite="sap.suite.ui.commons">
+    <suite:MicroProcessFlow width="100%">
+        <suite:content>
+            <suite:MicroProcessFlowItem
+                key="csr"
+                title="{i18n>businessFlowStepCsr}"
+                state="{= ${status} === 'csrInProgress' ? 'Information' : (${status} === 'csrCreated' || ${status} === 'deactivationInProgress' || ${status} === 'inactive' || ${status} === 'active' || ${status} === 'expired' || ${expired} === true ? 'Success' : 'None') }" />
+            <suite:MicroProcessFlowItem
+                key="activation"
+                title="{i18n>businessFlowStepActivation}"
+                state="{= ${status} === 'deactivationInProgress' ? 'Information' : (${status} === 'inactive' ? 'Warning' : (${status} === 'active' || ${status} === 'expired' || ${expired} === true ? 'Success' : 'None')) }" />
+            <suite:MicroProcessFlowItem
+                key="expired"
+                title="{i18n>businessFlowStepExpired}"
+                state="{= ${status} === 'expired' || ${expired} === true ? 'Error' : 'None' }" />
+        </suite:content>
+    </suite:MicroProcessFlow>
+</core:FragmentDefinition>

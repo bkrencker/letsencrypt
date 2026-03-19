@@ -1,0 +1,22 @@
+{
+  "xsappname": "letsencrypt",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.jobscheduler",
+      "description": "Scope for Job Scheduler",
+      "grant-as-authority-to-apps": [
+        "$XSSERVICENAME(jobscheduler)"
+      ]
+    }
+  ],
+  "attributes": [],
+  "role-templates": [],
+  "oauth2-configuration": {
+    "redirect-uris": [
+      "https://*.apps.example.com/login/callback",
+        "https://*.cfapps.eu10.hana.ondemand.com/login/callback",
+        "https://*.cfapps.eu10-004.hana.ondemand.com/login/callback"
+    ]
+}
+}
