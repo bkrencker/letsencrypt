@@ -30,8 +30,9 @@
     "bindCustomDomainService": "cds bind --to custom-domain-service --for hybrid",
     "bindDestinationService": "cds bind --to letsencrypt-destination --for hybrid",
     "bindJobSchedulingService": "cds bind --to jobscheduler --for hybrid",
-    "cdsWatchHybrid": "DEBUG=custom cds watch --profile hybrid --open certificates/webapp/index.html?sap-ui-xx-viewCache=false",
-    "cfEnvToDefault": "node scripts/extract-cf-env.js letsencrypt-srv default-env.json"
+    "cfEnvToDefault": "node scripts/extract-cf-env.js letsencrypt-srv default-env.json",
+    "prepareCdsWatchHybrid": "npm run bindCustomDomainService && npm run bindDestinationService && npm run bindJobSchedulingService",
+    "cdsWatchHybrid": "DEBUG=custom cds watch --profile hybrid --open certificates/webapp/index.html?sap-ui-xx-viewCache=false"
   },
   "engines": {
     "node": "^24"
