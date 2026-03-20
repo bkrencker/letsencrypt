@@ -1,4 +1,27 @@
-# Let's Encrypt Certificate Automation for SAP BTP Cloud Foundry
+> **Open Source Contribution:** This project is community-driven and **Open Source**! 🚀  
+> If you spot a bug or have an idea for a cool enhancement, your contributions are more than welcome. Feel free to open an **Issue** or submit a **Pull Request**.
+
+# Let's Encrypt Certificate Automation for SAP BTP Custom Domains
+
+## License
+This project is licensed under the [MIT License](LICENSE).
+
+## Table of Contents
+
+- [Summary](#summary)
+- [Project Overview](#project-overview)
+- [What The Application Does](#what-the-application-does)
+- [Logic In `srv/server.js`](#logic-in-srvserverjs)
+- [Most Important Runtime Logic](#most-important-runtime-logic)
+- [Important Technical Constraints](#important-technical-constraints)
+- [Let's Encrypt Rate Limits and Test Mode](#lets-encrypt-rate-limits-and-test-mode)
+- [Prerequisites](#prerequisites)
+- [Manual Steps Before Productive Use](#manual-steps-before-productive-use)
+- [How To Use The Application](#how-to-use-the-application)
+- [Option 1: Productive usage on SAP BTP](#option-1-productive-usage-on-sap-btp)
+- [Option 2: Local hybrid development](#option-2-local-hybrid-development)
+- [Useful Commands](#useful-commands)
+- [Project Structure](#project-structure)
 
 ## Summary
 
