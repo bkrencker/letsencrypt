@@ -1,6 +1,8 @@
 > **Open Source Contribution:** This project is community-driven and **Open Source**! 🚀  
 > If you spot a bug or have an idea for a cool enhancement, your contributions are more than welcome. Feel free to open an **Issue** or submit a **Pull Request**.
 
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 # Let's Encrypt Certificate Automation for SAP BTP Custom Domains
 
 ## License
