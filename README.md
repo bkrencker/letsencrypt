@@ -2,9 +2,11 @@
 > If you spot a bug or have an idea for a cool enhancement, your contributions are more than welcome. Feel free to open an **Issue** or submit a **Pull Request**.
 
 [![CAP](https://img.shields.io/badge/cds.js-9.8.0+-brightgreen)](https://cap.cloud.sap/docs/releases/2026/feb26)
+[![SAPUI5](https://img.shields.io/badge/sapui5-1.136_LTS-brightgreen)](https://ui5.sap.com/versionoverview.html)
+[![Node](https://img.shields.io/badge/Node.js-24_LTS-blue)](https://nodejs.org/en/about/previous-releases)
 [![ACME-Client](https://img.shields.io/badge/ACME--Client-5+-blue)](https://github.com/publishlab/node-acme-client)
-[![Express](https://img.shields.io/badge/Express-5+-orange)](https://expressjs.com/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Express](https://img.shields.io/badge/Express-5+-blue)](https://expressjs.com/)
+[![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
 
 # Let's Encrypt Certificate Automation for SAP BTP Custom Domains
 
